@@ -24,6 +24,14 @@ var rafID = null;
 var analyserContext = null;
 var canvasWidth, canvasHeight;
 var recIndex = 0;
+var dweetNamespace = "prova-browser-pub-" + (new Date().getTime());
+var avgMagnitude = 0;  // dav can be considered like the volume
+var recording = true;
+
+
+function dweetReadUrl(dweetNameSpace){
+    return "https://dweet.io/get/latest/dweet/for/" + dweetNamespace;    
+}
 
 /* TODO:
 
@@ -37,15 +45,6 @@ function saveAudio() {
     // audioRecorder.exportMonoWAV( doneEncoding );
 }
 
-function gotBuffers( buffers ) {
-    var canvas = document.getElementById( "wavedisplay" );
-
-    drawBuffer( canvas.width, canvas.height, canvas.getContext('2d'), buffers[0] );
-
-    // the ONLY time gotBuffers is called is right after a new recording is completed - 
-    // so here's where we should set up the download.
-    audioRecorder.exportWAV( doneEncoding );
-}
 
 function doneEncoding( blob ) {
     Recorder.setupDownload( blob, "myRecording" + ((recIndex<10)?"0":"") + recIndex + ".wav" );
@@ -53,18 +52,29 @@ function doneEncoding( blob ) {
 }
 
 function toggleRecording( e ) {
-    if (e.classList.contains("recording")) {
-        // stop recording
-        audioRecorder.stop();
-        e.classList.remove("recording");
-        audioRecorder.getBuffers( gotBuffers );
+    if (e.classList.contains("recording")) {        
+        console.log("Stopping recording");
+        recording = false;
+        if (audioRecorder){
+            audioRecorder.stop();
+            audioRecorder.clear();
+            e.classList.remove("recording");
+            //audioRecorder.getBuffers( gotBuffers );            
+        }
+        
+        
     } else {
-        // start recording
-        if (!audioRecorder)
+
+        console.log("Starting recording");
+        if (!audioRecorder) {
+            console.error("Could not find audioRecorder!!");
             return;
+        }
+            
         e.classList.add("recording");
         audioRecorder.clear();
         audioRecorder.record();
+        recording = true;
     }
 }
 
@@ -84,42 +94,50 @@ function cancelAnalyserUpdates() {
 }
 
 function updateAnalysers(time) {
-    if (!analyserContext) {
-        var canvas = document.getElementById("analyser");
-        canvasWidth = canvas.width;
-        canvasHeight = canvas.height;
-        analyserContext = canvas.getContext('2d');
-    }
-
-    // analyzer draw code here
-    {
-        var SPACING = 3;
-        var BAR_WIDTH = 1;
-        var numBars = Math.round(canvasWidth / SPACING);
-        var freqByteData = new Uint8Array(analyserNode.frequencyBinCount);
-
-        analyserNode.getByteFrequencyData(freqByteData); 
-
-        analyserContext.clearRect(0, 0, canvasWidth, canvasHeight);
-        analyserContext.fillStyle = '#F6D565';
-        analyserContext.lineCap = 'round';
-        var multiplier = analyserNode.frequencyBinCount / numBars;
-
-        // Draw rectangle for each frequency bin.
-        for (var i = 0; i < numBars; ++i) {
-            var magnitude = 0;
-            var offset = Math.floor( i * multiplier );
-            // gotta sum/average the block, or we miss narrow-bandwidth spikes
-            for (var j = 0; j< multiplier; j++)
-                magnitude += freqByteData[offset + j];
-            magnitude = magnitude / multiplier;
-            var magnitude2 = freqByteData[i * multiplier];
-            analyserContext.fillStyle = "hsl( " + Math.round((i*360)/numBars) + ", 100%, 50%)";
-            analyserContext.fillRect(i * SPACING, canvasHeight, BAR_WIDTH, -magnitude);
+    if (recording){
+        if (!analyserContext) {
+            var canvas = document.getElementById("analyser");
+            canvasWidth = canvas.width;
+            canvasHeight = canvas.height;
+            analyserContext = canvas.getContext('2d');
         }
+
+        // analyzer draw code here
+        {
+            var SPACING = 3;
+            var BAR_WIDTH = 1;
+            var numBars = Math.round(canvasWidth / SPACING);
+            var freqByteData = new Uint8Array(analyserNode.frequencyBinCount);
+
+            analyserNode.getByteFrequencyData(freqByteData); 
+
+            analyserContext.clearRect(0, 0, canvasWidth, canvasHeight);
+            analyserContext.fillStyle = '#F6D565';
+            analyserContext.lineCap = 'round';
+            var multiplier = analyserNode.frequencyBinCount / numBars;
+
+            var totalMagnitude = 0;
+            
+
+            // Draw rectangle for each frequency bin.
+            for (var i = 0; i < numBars; ++i) {
+                var magnitude = 0;
+                var offset = Math.floor( i * multiplier );
+                // gotta sum/average the block, or we miss narrow-bandwidth spikes
+                for (var j = 0; j< multiplier; j++)
+                    magnitude += freqByteData[offset + j];
+                magnitude = magnitude / multiplier;
+                totalMagnitude += magnitude;
+                var magnitude2 = freqByteData[i * multiplier];
+                analyserContext.fillStyle = "hsl( " + Math.round((i*360)/numBars) + ", 100%, 50%)";
+                analyserContext.fillRect(i * SPACING, canvasHeight, BAR_WIDTH, -magnitude);
+            }
+            
+            avgMagnitude = totalMagnitude / numBars;                
+        }                
     }
-    
     rafID = window.requestAnimationFrame( updateAnalysers );
+    
 }
 
 function toggleMono() {
@@ -158,7 +176,26 @@ function gotStream(stream) {
     updateAnalysers();
 }
 
-function initAudio() {
+function updateDweetNamespace(){
+    var dweetNameInput = $('#dweet-name-input');
+    dweetNamespace =  dweetNameInput.val();        
+    
+    var readLink = $('#dweet-read-url');                            
+    readLink.text(dweetReadUrl(dweetNamespace))
+            .attr('href', dweetReadUrl(dweetNamespace));    
+}
+
+function init() {            
+            
+        var dweetNameInput = $('#dweet-name-input');                            
+        
+        dweetNameInput.val(dweetNamespace)
+                      .change(function(){
+                            updateDweetNamespace(); 
+                        });                     
+    
+        updateDweetNamespace();
+    
         if (!navigator.getUserMedia)
             navigator.getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
         if (!navigator.cancelAnimationFrame)
@@ -181,6 +218,59 @@ function initAudio() {
             alert('Error getting audio');
             console.log(e);
         });
+        
 }
 
-window.addEventListener('load', initAudio );
+
+           
+
+
+
+window.addEventListener('load', init );
+
+
+window.setInterval(function(){
+    
+    var messages = $("#messages");    
+        
+             
+    if (recording){
+        var dweetWriteUrl = "https://dweet.io/dweet/for/" + dweetNamespace + "?volume=" + avgMagnitude;
+        
+        
+        var date = new Date().toISOString().replace("T", " ").substring(0, 19);
+        var message = $('<div>')
+                        .text(date + ":  Pubblicato volume su dweet: ");
+        var writeLink = $('<a>')
+                        .text(dweetWriteUrl)
+                        .attr('href', dweetWriteUrl)
+                        .attr('target', '_blank');
+                        
+        message.append(writeLink);
+        messages.append(message);
+        
+        messages.animate({
+            scrollTop: $("#messages").scrollHeight
+        });
+        
+        console.log("Pubblicato: ", dweetWriteUrl );               
+        console.log("Per leggere da dweet:       ", dweetReadUrl(dweetNamespace));
+        
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                console.log("Richiesta andata a buon fine");
+            }
+            
+            if (xhttp.readyState == 4 && xhttp.status !== 200) {
+                console.error("La richiesta non ha funzionato!");
+            } 
+        };
+        xhttp.open("GET", dweetWriteUrl, true);
+        xhttp.send();   
+       
+  } 
+    
+}, 3000);
+
+
