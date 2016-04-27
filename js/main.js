@@ -18,8 +18,8 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 var audioContext = new AudioContext();
 var audioInput = null,
     realAudioInput = null,
-    inputPoint = null,
-    audioRecorder = null;
+    inputPoint = null;
+    
 var rafID = null;
 var analyserContext = null;
 var canvasWidth, canvasHeight;
@@ -33,48 +33,17 @@ function dweetReadUrl(dweetNameSpace){
     return "https://dweet.io/get/latest/dweet/for/" + dweetNamespace;    
 }
 
-/* TODO:
-
-- offer mono option
-- "Monitor input" switch
-*/
-
-function saveAudio() {
-    audioRecorder.exportWAV( doneEncoding );
-    // could get mono instead by saying
-    // audioRecorder.exportMonoWAV( doneEncoding );
-}
-
-
-function doneEncoding( blob ) {
-    Recorder.setupDownload( blob, "myRecording" + ((recIndex<10)?"0":"") + recIndex + ".wav" );
-    recIndex++;
-}
 
 function toggleRecording( e ) {
-    if (e.classList.contains("recording")) {        
-        console.log("Stopping recording");
-        recording = false;
-        if (audioRecorder){
-            audioRecorder.stop();
-            audioRecorder.clear();
-            e.classList.remove("recording");
-            //audioRecorder.getBuffers( gotBuffers );            
-        }
-        
-        
+    if (e.classList.contains("recording")) {
+        recording = false;        
+        console.log("Stopping recording");        
+        e.classList.remove("recording");                            
     } else {
-
-        console.log("Starting recording");
-        if (!audioRecorder) {
-            console.error("Could not find audioRecorder!!");
-            return;
-        }
-            
-        e.classList.add("recording");
-        audioRecorder.clear();
-        audioRecorder.record();
         recording = true;
+        console.log("Starting recording");            
+        e.classList.add("recording");
+        
     }
 }
 
@@ -165,9 +134,7 @@ function gotStream(stream) {
 
     analyserNode = audioContext.createAnalyser();
     analyserNode.fftSize = 2048;
-    inputPoint.connect( analyserNode );
-
-    audioRecorder = new Recorder( inputPoint );
+    inputPoint.connect( analyserNode );   
 
     zeroGain = audioContext.createGain();
     zeroGain.gain.value = 0.0;
