@@ -13,6 +13,11 @@
    limitations under the License.
 */
 
+/**
+ * 2016 Modified by CoderDojoTrento for BrowserPub usage: 
+ *  https://github.com/CoderDojoTrento/browser-pub
+ */
+
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
 var audioContext = new AudioContext();
@@ -216,9 +221,11 @@ window.setInterval(function(){
         message.append(writeLink);
         messages.append(message);
         
-        messages.animate({
-            scrollTop: $("#messages").scrollHeight
-        });
+        // altrimenti non appare la stupida barra verticale
+        messages.css("max-height", "200px")
+        
+        messages.animate({ 
+            scrollTop: messages[0].scrollHeight}, 1000);
         
         console.log("Pubblicato: ", dweetWriteUrl );               
         console.log("Per leggere da dweet:       ", dweetReadUrl(dweetNamespace));
