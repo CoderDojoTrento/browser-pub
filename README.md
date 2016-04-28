@@ -2,7 +2,7 @@
 
 ### Browser Pub
 
-Sito web per mostrare col browser le frequenze registrate dal 
+Sito web (<a href="https://coderdojotrento.github.io/browser-pub/" target="_blank">demo</a>) per mostrare col browser le frequenze registrate dal 
 microfono e mandare il volume a <a href="http://dweet.io" target="_blank">dweet.io</a>
 
 L'utilizzo è immediato, non servono plugin flash, e non servono registrazione su dweet.io nè token segreti.
