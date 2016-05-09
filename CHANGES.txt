@@ -1,7 +1,13 @@
 
+###  0.2.1
+
+9 Maggio, 2016
+
+Aggiunto invito ad urlare e link a github
+
 ###  0.2
 
-Giovedì 28 Aprile, 2016
+28 Aprile, 2016
 
 Versione minimamente utilizzabile per mostrare col browser le frequenze registrate dal 
 microfono e mandare il volume a dweet.io 
